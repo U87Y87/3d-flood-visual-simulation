@@ -168,8 +168,8 @@ Vue events and HTTP requests carry the current workflow. `navigate` opens a tool
 The optional provider in `server/agentApi.js` generates advisory text. `src/js/agentClient.js` retains rule-based tool suggestions and handles fallback. The Automatic workflow panel initiates and monitors the full service sequence through `/workflow/jobs`. Individual panels also provide buttons for each operation.
 
 | Operation | Source and entry point | Result or dependency |
-| Automatic execution | `WorkflowPanel.vue`; `backend/workflow.py`; `backend/workflow_routes.py` | Isolated 100-frame run with status, cancellation, and automatic display |
 | --- | --- | --- |
+| Automatic execution | `WorkflowPanel.vue`; `backend/workflow.py`; `backend/workflow_routes.py` | Isolated 100-frame run with status, cancellation, and automatic display |
 | Request-to-tool recommendation | `AgentAssistant.vue`, `buildAnswer` | Rule-selected role, reply, tool IDs |
 | TIFF routing and file sharing | `src/App.vue`, `handleAgentTifFile`, `handlePipelineFile` | Panel navigation and shared input files |
 | DEM conversion | `backend/app.py`, `POST /convert` | ASC DEM from a TIFF |
@@ -180,7 +180,7 @@ The optional provider in `server/agentApi.js` generates advisory text. `src/js/a
 | Mesh generation | `meshConvert.vue`; `vite.config.js`, `/api/build-mesh`; `src/build-mesh-cache.cjs` | Mesh frames and index from JSON frames |
 | Visualization | `Render.vue`, `/api/mesh-index`, `/api/mesh-frame` | Frame selection and animation |
 
-See the [task-driven workflow example](docs/task-driven-workflow.md) for a request, the user-executed service sequence, expected outputs, and the remaining integration work.
+See the [automatic workflow example](docs/task-driven-workflow.md) for the two input files, the service execution sequence, expected outputs, and implementation details.
 
 ## Verification scope
 
