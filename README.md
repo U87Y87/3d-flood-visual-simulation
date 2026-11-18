@@ -16,6 +16,17 @@ node src/build-mesh-cache.cjs ../examples/frames ../examples/generated
 
 The tests cover flood-depth interpolation, building and road inundation, and agent fallback with mock responses. The last command converts two small synthetic water-depth frames and writes `examples/generated/index.json` and two `.mesh.json` files. These checks run without map credentials, the Python service, or a running flood solver.
 
+### GeoTIFF preprocessing test
+
+Use [`examples/data/FFF.tiff`](examples/data/FFF.tiff) to test the DEM-to-ASCII conversion. Install the Python dependencies, then run the following commands from the repository root:
+
+```powershell
+python -m pip install -r backend/requirements.txt
+python -c "import sys; from pathlib import Path; sys.path.insert(0, 'backend'); from TIFF转ASC格式 import dem_to_ascii_gdal; p = Path('examples/generated/FFF.asc'); p.parent.mkdir(parents=True, exist_ok=True); print(dem_to_ascii_gdal('examples/data/FFF.tiff', str(p)))"
+```
+
+The command writes `examples/generated/FFF.asc`. This test covers DEM preprocessing. Running a flood simulation also requires a matching roughness grid and a breach/inflow file.
+
 ## Run the visualization
 
 ```powershell
