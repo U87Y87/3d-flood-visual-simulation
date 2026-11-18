@@ -37,12 +37,19 @@ Open the local URL printed by Vite. The visualization starts with a plain globe.
 
 ## Run the processing services on Windows
 
-For the Python preprocessing API, use Python 3 with Tk support and install the dependencies in a virtual environment:
+For the Python preprocessing API, use Python 3 with Tk support. From the repository root, enter the `backend` directory, install the dependencies in your virtual environment, and start the service:
 
 ```powershell
-python -m pip install -r backend/requirements.txt
-python -m flask --app backend/app.py run --host 127.0.0.1 --port 5000
+cd backend
+python -m pip install -r requirements.txt
+python app.py
 ```
+
+The frontend connects to the preprocessing API at `http://localhost:5000`.
+
+### Input coordinate reference system
+
+Spatial input data for preprocessing must use **WGS 1984 (WGS 84)** as the geographic coordinate system underlying a **UTM projected coordinate system**. Choose the UTM zone and hemisphere for the study area. Reproject inputs to that WGS 84 / UTM coordinate system before processing, and use the same zone and hemisphere for data processed together. The included GeoTIFF uses WGS 84 / UTM zone 49N.
 
 For the flood solver, install Visual Studio 2022 Build Tools with MSVC v143, a Windows SDK and the C++ desktop workload. In a Visual Studio Developer PowerShell, run these commands from the repository root:
 
