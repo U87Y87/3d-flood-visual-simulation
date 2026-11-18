@@ -1,0 +1,86 @@
+ Terrain resolution: 10m
+Total points: 14
+pint 1
+  lon: 112.930085
+  lat: 35.389460
+  Depth: -0.01 m
+  DEMRC: row0, col1675
+  Tile coordinates: X26811, Y11458
+pint 2
+  lon: 112.930187
+  lat: 35.389412
+  Depth: -0.01 m
+  DEMRC: row0, col1675
+  Tile coordinates: X26811, Y11458
+pint 3
+  lon: 112.930290
+  lat: 35.389365
+  Depth: -0.01 m
+  DEMRC: row0, col1675
+  Tile coordinates: X26811, Y11458
+pint 4
+  lon: 112.930393
+  lat: 35.389317
+  Depth: -0.01 m
+  DEMRC: row0, col1675
+  Tile coordinates: X26811, Y11458
+pint 5
+  lon: 112.930495
+  lat: 35.389269
+  Depth: -0.01 m
+  DEMRC: row0, col1675
+  Tile coordinates: X26811, Y11458
+pint 6
+  lon: 112.930598
+  lat: 35.389222
+  Depth: -0.00 m
+  DEMRC: row0, col1675
+  Tile coordinates: X26811, Y11458
+pint 7
+  lon: 112.930701
+  lat: 35.389174
+  Depth: -0.00 m
+  DEMRC: row0, col1675
+  Tile coordinates: X26811, Y11458
+pint 8
+  lon: 112.930803
+  lat: 35.389127
+  Depth: -0.00 m
+  DEMRC: row0, col1675
+  Tile coordinates: X26811, Y11458
+pint 9
+  lon: 112.930906
+  lat: 35.389079
+  Depth: -0.00 m
+  DEMRC: row0, col1675
+  Tile coordinates: X26811, Y11458
+pint 10
+  lon: 112.931009
+  lat: 35.389031
+  Depth: -0.01 m
+  DEMRC: row0, col1675
+  Tile coordinates: X26811, Y11458
+pint 11
+  lon: 112.931111
+  lat: 35.388984
+  Depth: -0.01 m
+  DEMRC: row0, col1675
+  Tile coordinates: X26811, Y11458
+pint 12
+  lon: 112.931214
+  lat: 35.388936
+  Depth: -0.01 m
+  DEMRC: row0, col1675
+  Tile coordinates: X26811, Y11458
+pint 13
+  lon: 112.931317
+  lat: 35.388888
+  Depth: -0.01 m
+  DEMRC: row0, col1675
+  Tile coordinates: X26811, Y11458
+pint 14
+  lon: 112.931419
+  lat: 35.388841
+  Depth: -0.01 m
+  DEMRC: row0, col1675
+  Tile coordinates: X26811, Y11458

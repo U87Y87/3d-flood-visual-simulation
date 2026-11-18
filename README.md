@@ -16,16 +16,15 @@ node src/build-mesh-cache.cjs ../examples/frames ../examples/generated
 
 The tests cover flood-depth interpolation, building and road inundation, and agent fallback with mock responses. The last command converts two small synthetic water-depth frames and writes `examples/generated/index.json` and two `.mesh.json` files. These checks run without map credentials, the Python service, or a running flood solver.
 
-### GeoTIFF preprocessing test
+### DEM, roughness, and breach-index preprocessing example
 
-Use [`examples/data/FFF.tiff`](examples/data/FFF.tiff) to test the DEM-to-ASCII conversion. Install the Python dependencies, then run the following commands from the repository root:
+Use the bundled [DEM GeoTIFF](examples/data/FFF.tiff) and [breach-line TXT file](examples/data/index%20%282%29.txt) to test the existing **Data Processing** workflow. Start the [Python preprocessing API](#run-the-processing-services-on-windows) and [web interface](#run-the-visualization) in separate PowerShell windows, then open the URL printed by Vite.
 
-```powershell
-python -m pip install -r backend/requirements.txt
-python -c "import sys; from pathlib import Path; sys.path.insert(0, 'backend'); from TIFF转ASC格式 import dem_to_ascii_gdal; p = Path('examples/generated/FFF.asc'); p.parent.mkdir(parents=True, exist_ok=True); print(dem_to_ascii_gdal('examples/data/FFF.tiff', str(p)))"
-```
+1. In **Data Processing → Format Conversion**, select `examples/data/FFF.tiff` and click **Convert & download ASC**. The application downloads `FFF.asc` and stores both the ASC and its TIFF spatial reference for the following steps.
+2. In **Roughness Calculation**, use the automatically filled ASC and TIFF inputs. Click **Calculate & download roughness** to download `roughness_FFF.asc`. Both ASCII grids should have **755 columns and 518 rows**.
+3. In **ASC Grid Indices**, keep the same ASC and TIFF inputs. Select `examples/data/index (2).txt` and click **Export grid indices**. The application uses the 14 WGS 84 longitude/latitude pairs in the TXT to recalculate the breach indices for the TIFF grid. The downloaded `.dat` file should start with **30**, the number of valid grid cells, followed by one zero-based `column row` pair per line, counting columns from the west and rows from the south.
 
-The command writes `examples/generated/FFF.asc`. This test covers DEM preprocessing. Running a flood simulation also requires a matching roughness grid and a breach/inflow file.
+The bundled TXT provides a previously drawn breach line for this example. To create another input, use **Draw Breach → Export terrain profile (TXT)**.
 
 ## Run the visualization
 
@@ -49,7 +48,7 @@ The frontend connects to the preprocessing API at `http://localhost:5000`.
 
 ### Input coordinate reference system
 
-Spatial input data for preprocessing must use **WGS 1984 (WGS 84)** as the geographic coordinate system underlying a **UTM projected coordinate system**. Choose the UTM zone and hemisphere for the study area. Reproject inputs to that WGS 84 / UTM coordinate system before processing, and use the same zone and hemisphere for data processed together. The included GeoTIFF uses WGS 84 / UTM zone 49N.
+Gridded spatial inputs for preprocessing must use **WGS 1984 (WGS 84)** as the geographic coordinate system underlying a **UTM projected coordinate system**. Choose the UTM zone and hemisphere for the study area. Reproject inputs to that WGS 84 / UTM coordinate system before processing, and use the same zone and hemisphere for data processed together. The included GeoTIFF uses WGS 84 / UTM zone 49N.
 
 For the flood solver, install Visual Studio 2022 Build Tools with MSVC v143, a Windows SDK and the C++ desktop workload. In a Visual Studio Developer PowerShell, run these commands from the repository root:
 
