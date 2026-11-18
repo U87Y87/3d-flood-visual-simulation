@@ -100,6 +100,7 @@ async function runFloodSimulation() {
 watch(
   () => props.initialFiles,
   (files) => {
+    if (files.utmZone !== undefined) utmZone.value = String(files.utmZone)
     if (files.dem !== undefined) demFile.value = files.dem
     if (files.roughness !== undefined) roughnessFile.value = files.roughness
     if (files.breach !== undefined) breachFile.value = files.breach

@@ -11,6 +11,7 @@
 #include <chrono>
 #include <vector>
 #include <atomic>
+#include <stdexcept>
 
 #include "CAFloodNEW.h"
 #include "miniz.h"
@@ -249,8 +250,66 @@ void runFloodSimulation(const std::string& strdatapath) {
 /*================ 洪水模拟含转json结束 ================= */
 
 /* ================= 主函数 ================= */
-int main()
+
+int runWorkflow(const fs::path& directory, int frameCount, int zone, bool northern)
 {
+    if (frameCount < 1 || frameCount > 100 || zone < 1 || zone > 60)
+        throw std::runtime_error("Expected 1 to 100 frames and a valid UTM zone");
+    const fs::path inputs = directory / "inputs";
+    const fs::path depths = directory / "depth";
+    const fs::path json = directory / "json";
+    fs::create_directories(depths);
+    fs::create_directories(json);
+    CAFlood flood;
+    std::string inputPath = inputs.string();
+    // Suppress legacy per-cell diagnostic printing during initialization.
+    std::cout.setstate(std::ios_base::failbit);
+    const bool initialized = flood.InitCellArray(inputPath.data(), zone, northern);
+    std::cout.clear();
+    if (!initialized) throw std::runtime_error("Could not initialize flood inputs");
+    DAMINFORMATION dam{};
+    dam.m_fDamVolume = 200000000;
+    dam.m_fDamWidth = 30;
+    dam.m_fDamHeight = 3;
+    dam.m_fBreakWidth = 30;
+    dam.m_fBreakHeight = 3;
+    flood.SetDamBreakInfo(dam, 1.0, true);
+    flood.ComputeRushTimeANDQm();
+    flood.m_fRestVolume = dam.m_fDamVolume;
+    for (int frame = 1; frame <= frameCount; ++frame)
+    {
+        // Retain the existing solver's 80 calculation steps per output frame.
+        for (int step = 0; step < 80; ++step) flood.Calcultate();
+        std::string depthPath = (depths / (std::to_string(frame) + ".txt")).string();
+        flood.ExportDepth(depthPath.data());
+        std::string jsonPath = (json / (std::to_string(frame) + ".json")).string();
+        flood.ExportDepthJson(jsonPath.data());
+        std::cout << "FRAME " << frame << " " << flood.m_fCurTime << std::endl;
+    }
+    return 0;
+}
+
+int main(int argc, char* argv[])
+{
+    if (argc > 1)
+    {
+        try
+        {
+            if (argc != 6 || std::string(argv[1]) != "--workflow")
+                throw std::runtime_error("Usage: FloodTest --workflow directory frames utmZone N|S");
+            const std::string hemisphere(argv[5]);
+            if (hemisphere != "N" && hemisphere != "S")
+                throw std::runtime_error("Hemisphere must be N or S");
+            return runWorkflow(fs::absolute(argv[2]), std::stoi(argv[3]), std::stoi(argv[4]), hemisphere == "N");
+        }
+        catch (const std::exception& error)
+        {
+            std::cout.clear();
+            std::cerr << error.what() << std::endl;
+            return 1;
+        }
+    }
+
     cout << "当前目录: " << fs::current_path() << endl;
 
     httplib::Server svr;

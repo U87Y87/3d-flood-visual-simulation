@@ -79,7 +79,7 @@ public:
 	CAFlood();
 	virtual ~CAFlood();
 	//工程装载、保存、计算
-	bool InitCellArray(char* strDataDir);
+	bool InitCellArray(char* strDataDir, int utmZone = 48, bool northern = true);
 	//计算下一个时间周期的元胞状态
 
 	bool IsWaterSurfaceStable();
@@ -104,6 +104,8 @@ public:
 	void ExportAVec(char* strDataPath);
 	void ExportFileHeader(ofstream &fout);
 private:
+    int m_utmZone = 48;
+    bool m_northern = true;
 	void KillPots(long i, long j);
 	void RepairVolume(long i, long j);
 	void RepairFlux(long i, long j);

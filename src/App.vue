@@ -2,6 +2,7 @@
 import { computed, onBeforeUnmount, onMounted, ref, shallowRef } from 'vue'
 import AgentAssistant from './components/AgentAssistant.vue'
 import Caculate from './components/Caculate.vue'
+import WorkflowPanel from './components/WorkflowPanel.vue'
 import DataProcessingPanel from './components/DataProcessingPanel.vue'
 import MeshConvert from './components/meshConvert.vue'
 import Render from './components/Render.vue'
@@ -13,6 +14,7 @@ const cesiumViewer = shallowRef(null)
 const pendingAgentTifFile = shallowRef(null)
 const simulationFiles = shallowRef({ dem: null, roughness: null, breach: null })
 const activePanel = ref('data')
+const workflowRenderError = ref('')
 const searchText = ref('')
 const isLoggedIn = ref(false)
 const showTileDialog = ref(false)
@@ -22,6 +24,7 @@ const currentTime = ref(new Date())
 let clockTimer
 
 const menuItems = [
+  { id: 'workflow', label: 'Automatic workflow', short: 'WF' },
   { id: 'data', label: 'Data Processing', short: 'DT' },
   { id: 'caculate', label: 'Flood Simulation', short: 'FL' },
   { id: 'mesh', label: 'Grid Conversion', short: 'GR' },
@@ -86,6 +89,19 @@ function handlePipelineFile({ kind, file }) {
   simulationFiles.value = nextFiles
   if (nextFiles.dem && nextFiles.roughness && nextFiles.breach) {
     activePanel.value = 'caculate'
+  }
+}
+
+async function handleWorkflowComplete(result) {
+  workflowRenderError.value = ''
+  activePanel.value = 'render'
+  renderComponent.value?.clearFlood()
+  const loaded = await renderComponent.value?.loadMeshAnimationFolder(result.meshFolder)
+  if (loaded) {
+    renderComponent.value.startPlayback()
+  } else {
+    workflowRenderError.value = 'The workflow completed, but the viewer could not load its mesh folder. Use Show result to retry.'
+    activePanel.value = 'workflow'
   }
 }
 
@@ -197,6 +213,12 @@ onBeforeUnmount(() => {
       />
     </section>
 
+    <WorkflowPanel
+      v-show="activePanel === 'workflow'"
+      :render-error="workflowRenderError"
+      @inputs-ready="simulationFiles = $event"
+      @completed="handleWorkflowComplete"
+    />
     <Transition name="panel-slide">
       <DataProcessingPanel
         v-show="activePanel === 'data'"

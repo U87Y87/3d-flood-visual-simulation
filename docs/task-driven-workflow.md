@@ -1,47 +1,56 @@
-# Task-driven workflow example
+# Automatic TIFF-to-visualization example
 
-## Task and environment
+Start the Python API from `backend` with `python app.py`, and Vite from the repository root with `npm run dev -- --host 127.0.0.1`. Install dependencies and build `solver/FloodTest.sln` in Release x64 first, following the [README](../README.md).
 
-Use this request in **AI Assistant**:
+## Run in the existing application
 
-> Prepare TIFF terrain data, calculate roughness and breach indices, and show me the tools for a flood workflow.
+1. Open **Automatic workflow**.
+2. Select `examples/data/FFF.tiff` as terrain and `examples/data/index (2).txt` as the breach line.
+3. Click **Run 100-frame workflow**.
+4. Wait for preprocessing, simulation, and mesh generation to finish. The application opens the generated meshes in **Visualization**, flies to the flood, and starts animation.
 
-In default local mode, the keyword-scoring rule selects **Data Agent** and provides a **Data Processing** tool button. File selection and parameter entry take place in the panels. The request demonstrates the existing recommendation mechanism.
+The original Data Processing, Flood Simulation, Grid Conversion, and Visualization panels remain available for individual operations. The automatic panel fills the generated simulation input files and UTM zone into shared application state.
 
-Start the Python API from `backend` with `python app.py`, and start Vite from the repository root with `npm run dev -- --host 127.0.0.1`. Use the [README](../README.md) to install dependencies first.
+## Service dependencies and outputs
 
-## Run the service sequence in the existing interface
+| Stage | Inputs | Operation | Output |
+| --- | --- | --- | --- |
+| DEM | WGS 84 / UTM TIFF | Existing `dem_to_ascii_gdal` | `inputs/dem.asc` |
+| Roughness | DEM | Existing slope-based roughness function | `inputs/cao.asc` |
+| Breach | DEM, TIFF projection, TXT longitude/latitude pairs | Existing grid-index calculation | `inputs/InputRiver.dat` |
+| Simulation | Three generated inputs, detected UTM zone and hemisphere | C++ cellular-automata solver, 80 steps per frame | `depth/1.txt` through `100.txt`, `json/1.json` through `100.json` |
+| Mesh | 100 standard JSON frames | Existing `src/build-mesh-cache.cjs` | 100 `.mesh.json` files and `mesh/index.json` |
+| Display | Mesh folder returned in job status | Existing Cesium loader and playback | Animated flood geometry in the application |
 
-1. In **AI Assistant → Validate & route data**, select `examples/data/FFF.tiff`. The assistant validates its extension and header, then opens **Data Processing → Format Conversion** with the file filled in.
-2. Click **Convert & download ASC**. The `/convert` endpoint produces `FFF.asc`.
-3. Open **Roughness Calculation** and click **Calculate & download roughness** using the shared DEM and reference TIFF. The `/roughness` endpoint produces `roughness_FFF.asc`.
-4. Open **ASC Grid Indices**, select `examples/data/index (2).txt`, and click **Export grid indices**. The `/get_ascii_values` endpoint produces a DAT with 30 cells from the 14 coordinate points.
-5. The `pipeline-file` events populate all three inputs in **Flood Simulation**. Set the UTM zone to **49** for this northern-hemisphere example.
+For the bundled input pair, verify 755 columns, 518 rows, UTM 49N, 30 indexed breach cells, and exactly 100 JSON and mesh frames. Downloadable generated inputs are linked in the workflow panel. The output folder is `flood-work/workflows/<job-id>/`.
 
-The two grids have 755 columns and 518 rows. The DAT begins with 30, followed by zero-based column/row pairs measured from the west/south. Repeated coordinates in a cell are deduplicated by the backend sampling routine.
+The solver exits after generating frame 100. The Python worker then verifies JSON outputs, launches mesh conversion, verifies the mesh index, and records completion. Failures and cancellation stop the current calculation and leave a status message and logs in the run directory.
 
-Run `python tests/preprocessing_example.py` from the repository root to verify the three preprocessing endpoints and their downloadable outputs independently of browser interaction.
+## Implementation
 
-## Continue with the synthetic rendering example
+- `backend/workflow_routes.py` accepts input uploads, starts an isolated worker, serves status and generated inputs, and handles cancellation.
+- `backend/workflow.py` validates inputs, derives the WGS 84 / UTM zone and hemisphere, executes service dependencies, and checks outputs.
+- `solver/FloodTest/FloodTest.cpp` provides `--workflow directory frames zone N|S` and the bounded solver loop.
+- `CAFloodNEW.cpp` applies the supplied UTM zone and zero-based south-origin breach indexing and exports standard JSON.
+- `WorkflowPanel.vue` submits the two input files and polls job progress.
+- `App.vue` receives shared input files and the completed mesh folder, then calls the existing `Render.vue` loader and playback.
 
-To exercise mesh generation and visualization, use the two bundled synthetic JSON frames:
+The scheduler follows a fixed dependency sequence. The AI Assistant separately uses keyword-based tool suggestions and optional advisory chat. Correspondence between this implementation and the paper's proposed multi-agent planning mechanism requires the authors' method and experiment code.
 
-1. Open **Grid Conversion** and select `examples/frames` as the source and `examples/generated` as the output directory. Click **Start conversion**.
-2. Expect `0.mesh.json`, `1.mesh.json`, and `index.json`. Each frame contains 9 points and 8 triangles.
-3. Open **Visualization → Choose mesh folder**, select `examples/generated`, and use **Zoom to flood**, **Next frame**, and **Play animation**.
+## Terminal example
 
-The synthetic JSON inputs are provided separately from the TIFF/breach preprocessing outputs. Their coordinates describe a separate illustrative scene. This section validates the mesh-to-rendering portion of the workflow.
+From the repository root:
 
-## Integration work for a full simulated chain
+```powershell
+python tests/workflow_example.py
+```
 
-The solver exposes `POST /upload-all`, `POST /stop`, and `GET /download`. The frontend simulation panel expects JSON containing `txtZipUrl`, `jsonZipUrl`, and an optional `restartUrl`, and uses proxy routes with corresponding download names. Aligning these interfaces is required before the panel can complete its download sequence.
+This executes the application's job handlers and the actual solver and mesh converter. It verifies frame counts and output coordinates and prints the generated mesh folder.
 
-The active solver function exports numbered TXT water-depth grids. The mesh converter consumes JSON frames. The included `backend/grid_to_tin.py` provides a separate conversion component, and integration of this stage into the solver completion flow remains pending.
+The smaller [preprocessing example](../tests/preprocessing_example.py) and synthetic [mesh frames](../examples/frames) remain available for checking individual services.
 
-The interface includes four named agent roles. The inspected implementation selects recommendations through keyword scores, shares files through Vue events, and invokes HTTP services through user actions. A structured natural-language task schema, inter-agent messaging, dependency-based service planning, and automatic execution remain pending.
+## Simulation settings
 
-## Verification and publication
+The automatic solver retains the existing configured dam volume of 200,000,000, dam width 30, dam height 3, breach width 30, and breach height 3. It retains 80 calculation steps per frame. These settings define the provided software demonstration and require domain validation for each research case.
 
-Automated checks exercise the preprocessing outputs and synthetic mesh outputs separately. Full simulation-to-visualization execution and reproduction of the manuscript's multi-agent experiments remain pending. The authors should relate the manuscript's method claims to the corresponding executable implementation before resubmission.
-
-The README includes a **Computer Code Availability** paragraph for the manuscript. The manuscript file should receive that section through the authors' normal editing process.
+The automatic workflow uses the process entry point `--workflow`, bypassing the legacy HTTP upload/download response mismatch. The legacy manual simulation HTTP interface retains its existing response contract.

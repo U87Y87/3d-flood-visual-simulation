@@ -9,7 +9,9 @@ import math
 from ASC文件获取粗糙度 import ascii_to_roughness_slope_based, calculate_ascii_bounds, get_boundary_roughness_values, get_ascii_values_by_coordinates, clip_ascii_by_polygon, set_utm_epsg, get_utm_epsg_from_tif
 from TIFF转ASC格式 import dem_to_ascii_gdal
 from 地图瓦片行列号 import MapCoordinateConverter
+from workflow_routes import workflow_api
 app = Flask(__name__)
+app.register_blueprint(workflow_api)
 app.config['SECRET_KEY'] = 'your-secret-key-here'
 app.config['MAX_CONTENT_LENGTH'] = 2000 * 1024 * 1024  # 2000MB max file size
 app.config['UPLOAD_FOLDER'] = 'uploads'

@@ -739,6 +739,7 @@ onBeforeUnmount(() => {
 })
 
 defineExpose({
+  loadMeshAnimationFolder,
   loadYongchuanCase,
   caseLoaded: caseInfrastructureVisible,
   infrastructureShown,

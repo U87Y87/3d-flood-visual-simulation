@@ -174,6 +174,11 @@ export default defineConfig(({ mode }) => ({
   // Allow requests forwarded by ngrok while keeping Vite's host check enabled.
   allowedHosts: ['.ngrok-free.dev'],
   proxy: {
+    '/api/workflow': {
+      target: 'http://127.0.0.1:5000',
+      changeOrigin: true,
+      rewrite: (url) => url.replace(/^\/api/, ''),
+    },
     '/api/upload-flood-files': {
       target: 'http://127.0.0.1:18080',
       changeOrigin: true,

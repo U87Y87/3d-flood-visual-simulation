@@ -8,6 +8,7 @@
 #include <iomanip>
 #include <limits>
 #include <sstream>
+#include <stdexcept>
 
 using namespace std;
 static int InferUtmZoneFromCells(CACELL** cells, int height, int width)
@@ -72,6 +73,8 @@ CAFlood::CAFlood()
 	m_fSpatialTimeRatio = 100;//设置时空比率
 	m_fTimeUnit = 0;
 	m_fSumQ = 0.0;
+    m_lRepairNum = 0;
+    m_fDamWaterFlux = 0;
 }
 
 CAFlood::~CAFlood()
@@ -275,7 +278,7 @@ void CAFlood::ComputeRushTimeANDQm()
 	return;
 }
 
-bool CAFlood::InitCellArray(char* strDataDir)
+bool CAFlood::InitCellArray(char* strDataDir, int utmZone, bool northern)
 {//初始化场景参数
 	int nWidth;//dem范围大小（列数）
 	int nHeight;//dem范围大小（行数）
@@ -283,19 +286,15 @@ bool CAFlood::InitCellArray(char* strDataDir)
 	float fCellsize;//元胞尺寸
 	float* pDemdata = NULL;
 
-	char strDemPath[80];//存储数据名称
-	char strCoarseRate[80];
-	char strRiverInit[80];
-	strcpy(strDemPath, strDataDir);
-	strcpy(strCoarseRate, strDataDir);
-	strcpy(strRiverInit, strDataDir);
-	
 
-
-	// 统一使用 '/' 拼接路径V0711
-	snprintf(strDemPath, sizeof(strDemPath), "%s/dem.asc", strDataDir);
-	snprintf(strCoarseRate, sizeof(strCoarseRate), "%s/cao.asc", strDataDir);
-	snprintf(strRiverInit, sizeof(strRiverInit), "%s/InputRiver.dat", strDataDir);
+    m_utmZone = utmZone;
+    m_northern = northern;
+    const std::string demPath = std::string(strDataDir) + "/dem.asc";
+    const std::string roughnessPath = std::string(strDataDir) + "/cao.asc";
+    const std::string breachPath = std::string(strDataDir) + "/InputRiver.dat";
+    const char* strDemPath = demPath.c_str();
+    const char* strCoarseRate = roughnessPath.c_str();
+    const char* strRiverInit = breachPath.c_str();
 
 	/*读进DEM数据,分配cell数组*/
 	FILE * file = fopen(strDemPath, "r");
@@ -309,7 +308,7 @@ bool CAFlood::InitCellArray(char* strDataDir)
 	fseek(file, 0L, SEEK_END);
 	nCount = ftell(file);
 	fseek(file, 0L, SEEK_SET);
-	char *pData = new char[nCount];
+	char *pData = new char[nCount + 1]();
 	fread(pData, 1, nCount, file);
 	//读文件头
 	strtok(pData, " \n");
@@ -357,7 +356,7 @@ bool CAFlood::InitCellArray(char* strDataDir)
 		if (temp != 9999){
 			double X = this->deminfo.m_xllcorner + j*this->deminfo.m_fCellsize;
 			double Y = this->deminfo.m_yllcorner + (nHeight - i)*this->deminfo.m_fCellsize;
-			UTM2LatLon* c = new UTM2LatLon();
+			UTM2LatLon converter;
 			double  LatLong[2];
 
 			stringstream ss;                       //ylz 将其转化为C++的string
@@ -369,9 +368,9 @@ bool CAFlood::InitCellArray(char* strDataDir)
 			std::string s1 = strX.str();
 			std::string s2 = strY.str();
 
-			std::string ssss = "48 N " + s1 + " " + s2;
+			std::string ssss = std::to_string(m_utmZone) + (m_northern ? " N " : " M ") + s1 + " " + s2;
 
-			c->convertUTMToLatLong(ssss, LatLong);                  //ylz  转化为经纬度
+			converter.convertUTMToLatLong(ssss, LatLong);                  //ylz  转化为经纬度
 
 			m_p2DCellArray[i][j].Lat = LatLong[0] * 3.1415926535897932384626 / 180; //转换为弧度
 			m_p2DCellArray[i][j].Long = LatLong[1] * 3.1415926535897932384626 / 180;//转换为弧度
@@ -409,7 +408,7 @@ bool CAFlood::InitCellArray(char* strDataDir)
 	nCount = ftell(file);
 	fseek(file, 0L, SEEK_SET);
 
-	pData = new char[nCount];
+	pData = new char[nCount + 1]();
 	fread(pData, 1, nCount, file);
 	strtok(pData, "\n");
 	strtok(NULL, "\n");
@@ -431,10 +430,11 @@ bool CAFlood::InitCellArray(char* strDataDir)
 	fclose(file);
 	//读入基流数据,存入基流数组pRiArray中
 	file = fopen(strRiverInit, "r");
+    if (!file) throw std::runtime_error("Could not open InputRiver.dat");
 	fseek(file, 0L, SEEK_END);
 	nCount = ftell(file);
 	fseek(file, 0L, SEEK_SET);
-	pData = new char[nCount];
+	pData = new char[nCount + 1]();
 	fread(pData, 1, nCount, file);
 	m_nCellNum = atoi(strtok(pData, " \n"));//atoi函数（将字符串转换成整型数）  LL：源头元胞总数
 	m_pOriginArray = new RIVERINDEX[m_nCellNum];
@@ -450,11 +450,14 @@ bool CAFlood::InitCellArray(char* strDataDir)
 	{
 		n = m_pOriginArray[i].x;//源头位置列号
 		m = m_pOriginArray[i].y;//源头位置行号
-		m_p2DCellArray[nHeight - m][n].b_IsRiver = true;
-		m_p2DCellArray[nHeight - m][n].b_IsOrigin = true;
-		m_p2DCellArray[nHeight - m][n].DemData = 9999;
-		m_p2DCellArray[deminfo.m_nHeight - m][n].WaterHeight_New = 9999;
-		m_p2DCellArray[deminfo.m_nHeight - m][n].WaterHeight_Old = 9999;
+        if (n <= 0 || n >= nWidth - 1 || m <= 0 || m >= nHeight - 1)
+            throw std::runtime_error("Breach cells must lie inside the DEM boundary");
+
+		m_p2DCellArray[nHeight - 1 - m][n].b_IsRiver = true;
+		m_p2DCellArray[nHeight - 1 - m][n].b_IsOrigin = true;
+		m_p2DCellArray[nHeight - 1 - m][n].DemData = 9999;
+		m_p2DCellArray[deminfo.m_nHeight - 1 - m][n].WaterHeight_New = 9999;
+		m_p2DCellArray[deminfo.m_nHeight - 1 - m][n].WaterHeight_Old = 9999;
 	}
 	//对上下边界进行初始化
 	for (i = 0; i<deminfo.m_nWidth; i++)
@@ -503,14 +506,14 @@ void CAFlood::Calcultate()
 		//LL 源头位置数组
 		n = m_pOriginArray[i].x;//列号
 		m = m_pOriginArray[i].y;//行号
-		m_p2DCellArray[deminfo.m_nHeight - m][n].XUnitFlux_Old = (m_fDamWaterFlux * 2 * m_fTimeUnit) / (2 * m_nCellNum*deminfo.m_fCellsize*m_fTimeUnit);
+		m_p2DCellArray[deminfo.m_nHeight - 1 - m][n].XUnitFlux_Old = (m_fDamWaterFlux * 2 * m_fTimeUnit) / (2 * m_nCellNum*deminfo.m_fCellsize*m_fTimeUnit);
 		//ylz   计算单宽流量：    容量除以元胞个数即单个元胞的容量
 		// ylz                        再除以元胞大小即单个元胞单位内的容量 
 		// ylz                        最后除以时间即每秒范围内单个元胞单位内的容量 
 		//ylz  最终溃口元胞的水量都是一样的
-		m_p2DCellArray[deminfo.m_nHeight - m][n].XUnitFlux_New = m_p2DCellArray[deminfo.m_nHeight - m][n].XUnitFlux_Old;
-		m_p2DCellArray[deminfo.m_nHeight - m][n].YUnitFlux_Old = m_p2DCellArray[deminfo.m_nHeight - m][n].XUnitFlux_Old;
-		m_p2DCellArray[deminfo.m_nHeight - m][n].YUnitFlux_New = m_p2DCellArray[deminfo.m_nHeight - m][n].XUnitFlux_Old;
+		m_p2DCellArray[deminfo.m_nHeight - 1 - m][n].XUnitFlux_New = m_p2DCellArray[deminfo.m_nHeight - 1 - m][n].XUnitFlux_Old;
+		m_p2DCellArray[deminfo.m_nHeight - 1 - m][n].YUnitFlux_Old = m_p2DCellArray[deminfo.m_nHeight - 1 - m][n].XUnitFlux_Old;
+		m_p2DCellArray[deminfo.m_nHeight - 1 - m][n].YUnitFlux_New = m_p2DCellArray[deminfo.m_nHeight - 1 - m][n].XUnitFlux_Old;
 	}
 
 	float fWaterDepth,//当前格网水深
@@ -800,85 +803,41 @@ void CAFlood::KillPots(long i, long j)                //ylz   用于处理水洼
 
 void CAFlood::ExportDepthJson(char* strDataPath)
 {
-	if (m_p2DCellArray == NULL)
-	{
-		return;
-	}
-
-	string outPath(strDataPath);
-	size_t dotPos = outPath.find_last_of('.');
-	if (dotPos == string::npos)
-	{
-		outPath += ".json";
-	}
-	else
-	{
-		outPath = outPath.substr(0, dotPos) + ".json";
-	}
-
-	ofstream fout(outPath.c_str(), ios::out);
-	if (!fout)
-	{
-		cout << "json create failed: " << outPath << endl;
-		return;
-	}
-
-	int zone = InferUtmZoneFromCells(m_p2DCellArray, deminfo.m_nHeight, deminfo.m_nWidth);
-	const string latZone = "N";
-	UTM2LatLon converter;
-	double maxDepth = 0.0;
-	for (int i = 0; i < deminfo.m_nHeight; ++i)
-	{
-		for (int j = 0; j < deminfo.m_nWidth; ++j)
-		{
-			double depth = m_p2DCellArray[i][j].WaterHeight_Old - m_p2DCellArray[i][j].DemData;
-			depth = round(depth * 100.0) / 100.0;
-			if (depth > 0.0 && depth != 9999.0 && depth > maxDepth)
-			{
-				maxDepth = depth;
-			}
-		}
-	}
-
-	fout << "{min: 0,max: " << FormatJsonNumber(maxDepth) << ",points: [";
-
-	for (int i = 0; i < deminfo.m_nHeight; ++i)
-	{
-		for (int j = 0; j < deminfo.m_nWidth; ++j)
-		{
-			double depth = m_p2DCellArray[i][j].WaterHeight_Old - m_p2DCellArray[i][j].DemData;
-			depth = round(depth * 100.0) / 100.0;
-			if (depth <= 0.0 || depth == 9999.0)
-			{
-				continue;
-			}
-
-			if (depth > maxDepth)
-			{
-				maxDepth = depth;
-			}
-
-			double x = deminfo.m_xllcorner + (j + 0.5) * deminfo.m_fCellsize;
-			double y = deminfo.m_yllcorner + (deminfo.m_nHeight - i - 0.5) * deminfo.m_fCellsize;
-
-			stringstream utm;
-			utm << zone << " " << latZone << " " << fixed << setprecision(6) << x << " " << y;
-
-			double latlon[2];
-			converter.convertUTMToLatLong(utm.str(), latlon);
-			double lat = round(latlon[0] * 10000000000.0) / 10000000000.0;
-			double lon = round(latlon[1] * 10000000000.0) / 10000000000.0;
-
-			fout << "{x:" << FormatJsonNumber(lon)
-				<< ",y:" << FormatJsonNumber(lat)
-				<< ",value:" << FormatJsonNumber(depth) << "},";
-		}
-	}
-
-	fout << "]}";
-	fout.close();
-	cout << "json保存完毕: " << outPath << " (UTM zone " << zone << ")" << endl;
-
+    std::string outPath(strDataPath);
+    const size_t dot = outPath.find_last_of('.');
+    outPath = (dot == std::string::npos ? outPath : outPath.substr(0, dot)) + ".json";
+    std::ofstream output(outPath);
+    if (!output) throw std::runtime_error("Could not create flood JSON");
+    output << std::setprecision(12) << "{\"timeSeconds\":" << m_fCurTime << ",\"points\":[";
+    UTM2LatLon converter;
+    bool first = true;
+    for (int row = 0; row < deminfo.m_nHeight; ++row)
+    {
+        for (int col = 0; col < deminfo.m_nWidth; ++col)
+        {
+            const CACELL& cell = m_p2DCellArray[row][col];
+            const double depth = cell.WaterHeight_Old - cell.DemData;
+            if (cell.DemData == 9999 || cell.b_IsOrigin) continue;
+            if (!std::isfinite(depth)) throw std::runtime_error("Non-finite water depth");
+            if (depth <= 0) continue;
+            const double x = deminfo.m_xllcorner + (col + 0.5) * deminfo.m_fCellsize;
+            const double y = deminfo.m_yllcorner + (deminfo.m_nHeight - row - 0.5) * deminfo.m_fCellsize;
+            std::ostringstream utm;
+            utm << m_utmZone << (m_northern ? " N " : " M ")
+                << std::fixed << std::setprecision(8) << x << " " << y;
+            double latlon[2];
+            converter.convertUTMToLatLong(utm.str(), latlon);
+            if (!std::isfinite(latlon[0]) || !std::isfinite(latlon[1]))
+                throw std::runtime_error("Non-finite output coordinates");
+            if (!first) output << ",";
+            first = false;
+            output << "{\"x\":" << latlon[1] << ",\"y\":" << latlon[0]
+                << ",\"value\":" << depth << "}";
+        }
+    }
+    output << "]}";
+    output.close();
+    if (!output) throw std::runtime_error("Could not finish writing flood JSON");
 }
 void CAFlood::ExportDepth(char* strDataPath)
 {
