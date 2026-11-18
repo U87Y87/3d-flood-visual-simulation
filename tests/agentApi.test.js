@@ -6,7 +6,7 @@ import { resolveAgentReply } from '../src/js/agentClient.js'
 
 const env = { AGENT_PROVIDER: 'openai', OPENAI_API_KEY: 'test-server-only-secret', OPENAI_MODEL: 'test-model' }
 const history = [{ role: 'user', content: '如何进行洪水模拟？' }]
-const localAnswer = { agent: '模拟智能体', reply: '先准备地形和糙率数据。', tools: [{ id: 'caculate', name: '洪水模拟' }] }
+const localAnswer = { agent: 'Decision Maker', reply: '先准备地形和糙率数据。', tools: [{ id: 'caculate', name: '洪水模拟' }] }
 
 async function call(env, fetchImpl, { url = '/api/agent/chat', body = { messages: history }, headers = {}, method = 'POST' } = {}) {
   const request = Readable.from([JSON.stringify(body)])
@@ -32,6 +32,9 @@ test('server sends the key only upstream and extracts text after reasoning outpu
     const payload = JSON.parse(options.body)
     assert.equal(payload.model, 'test-model')
     assert.equal(payload.store, false)
+    for (const role of ['Requirement Analyst', 'Task Creator', 'Decision Maker', 'Task Executor', 'Organizer']) {
+      assert.ok(payload.instructions.includes(role))
+    }
     assert.deepEqual(payload.input, history)
     return { ok: true, json: async () => ({ output: [
       { type: 'reasoning', summary: [] },
@@ -72,12 +75,15 @@ test('the browser uses local replies without a request and preserves tool recomm
     fetchImpl: () => { throw new Error('Should not call') } })
   assert.equal(local.reply, localAnswer.reply)
   assert.equal(local.source, 'local')
+  assert.equal(local.agent, localAnswer.agent)
   const remote = await resolveAgentReply({ useRemote: true, history, localAnswer,
     fetchImpl: async () => ({ ok: true, json: async () => ({ source: 'openai', reply: '远程建议' }) }) })
   assert.equal(remote.reply, '远程建议')
+  assert.equal(remote.agent, localAnswer.agent)
   assert.deepEqual(remote.tools, localAnswer.tools)
   const fallback = await resolveAgentReply({ useRemote: true, history, localAnswer,
     fetchImpl: async () => ({ ok: true, json: async () => ({ source: 'local' }) }) })
   assert.equal(fallback.source, 'fallback')
   assert.equal(fallback.reply, localAnswer.reply)
+  assert.equal(fallback.agent, localAnswer.agent)
 })

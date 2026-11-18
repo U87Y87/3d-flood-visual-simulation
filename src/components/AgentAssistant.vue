@@ -1,6 +1,7 @@
 <script setup>
 import { nextTick, onBeforeUnmount, onMounted, ref } from 'vue'
 import { resolveAgentReply } from '../js/agentClient.js'
+import { AGENT_ROLES } from '../js/agentRoles.js'
 
 const emit = defineEmits(['navigate', 'tif-file'])
 
@@ -31,19 +32,14 @@ const quickQuestions = [
   'Explore the Yongchuan case',
 ]
 
-const agents = [
-  { name: 'Coordinator', role: 'Task planning', icon: 'CO', status: 'online' },
-  { name: 'Data Agent', role: 'Data preparation', icon: 'DA', status: 'ready' },
-  { name: 'Simulation Agent', role: 'Flood Simulation', icon: 'SIM', status: 'ready' },
-  { name: 'Scene Agent', role: 'Map interaction', icon: '3D', status: 'ready' },
-]
+const agents = Object.values(AGENT_ROLES)
 
 const messages = ref([
   {
     id: 1,
     role: 'assistant',
-    agent: 'Coordinator',
-    content: 'Hi, I’m your Disaster Chain assistant. Describe your task and I’ll coordinate specialist agents and suggest the right tools.',
+    agent: AGENT_ROLES.requirementAnalyst.name,
+    content: 'Describe your flood task, inputs, and constraints. I can help identify the required services.',
     tools: [],
   },
 ])
@@ -51,7 +47,7 @@ const messages = ref([
 const toolRules = [
   {
     keywords: ['tif', 'tiff', 'asc', '格式', '转换', '粗糙度', '行列', '预处理', '数据', 'format', 'convert', 'roughness', 'indices', 'preprocess', 'data'],
-    agent: 'Data Agent',
+    agent: AGENT_ROLES.decisionMaker.name,
     reply: 'Start with Data Processing to convert TIFF/ASC files, calculate roughness, draw breach lines, and find ASC grid indices before running a simulation.',
     tools: [
       { id: 'data', name: 'Data Processing', detail: 'Formats · Roughness · Grid indices' },
@@ -59,7 +55,7 @@ const toolRules = [
   },
   {
     keywords: ['洪水', '模拟', '水深', '淹没', '计算', '边界', 'flood', 'simulate', 'simulation', 'depth', 'inundation', 'boundary'],
-    agent: 'Simulation Agent',
+    agent: AGENT_ROLES.decisionMaker.name,
     reply: 'Use Flood Simulation with terrain, surface roughness, and breach location files. If needed, prepare formats and roughness in Data Processing first.',
     tools: [
       { id: 'caculate', name: 'Flood Simulation', detail: 'Parameters · Boundaries · Solver' },
@@ -68,7 +64,7 @@ const toolRules = [
   },
   {
     keywords: ['网格', '格网', 'mesh', '网格化', 'grid', 'meshing'],
-    agent: 'Data Agent',
+    agent: AGENT_ROLES.decisionMaker.name,
     reply: 'Use Grid Conversion to generate a mesh for rendering or computation, then inspect the result in Visualization.',
     tools: [
       { id: 'mesh', name: 'Grid Conversion', detail: 'Mesh generation · Formats' },
@@ -77,7 +73,7 @@ const toolRules = [
   },
   {
     keywords: ['可视化', '渲染', '地图', '地形', '三维', '切片', '场景', 'visualization', 'render', 'map', 'terrain', '3d', 'tile', 'scene'],
-    agent: 'Scene Agent',
+    agent: AGENT_ROLES.decisionMaker.name,
     reply: 'Inspect results on the 3D map in Visualization. Use Show terrain in the top bar to enable terrain, or Load tiles to import map data.',
     tools: [
       { id: 'render', name: 'Visualization', detail: '3D rendering · Animation' },
@@ -86,7 +82,7 @@ const toolRules = [
   },
   {
     keywords: ['案例', '永川', '示例', '演示', '监测', 'case', 'yongchuan', 'example', 'demo', 'monitor'],
-    agent: 'Scene Agent',
+    agent: AGENT_ROLES.decisionMaker.name,
     reply: 'Open Case Studies and load the Yongchuan case to explore the flood animation, maximum water depth, and inundated area over time.',
     tools: [
       { id: 'sample', name: 'Case Studies', detail: 'Yongchuan · Live monitoring' },
@@ -112,7 +108,7 @@ function buildAnswer(text) {
   if (matched?.score > 0) return matched
 
   return {
-    agent: 'Coordinator',
+    agent: AGENT_ROLES.requirementAnalyst.name,
     reply: 'I can help with Data Processing, Flood Simulation, Grid Conversion, Visualization, and Case Studies. Tell me your input format, desired result, or current step for more specific guidance.',
     tools: [
       { id: 'data', name: 'Data Processing', detail: 'Prepare input data' },
@@ -169,7 +165,7 @@ function addValidationMessage(content, valid = false) {
   messages.value.push({
     id: messageId++,
     role: 'assistant',
-    agent: 'Data Agent',
+    agent: AGENT_ROLES.requirementAnalyst.name,
     content,
     tools: valid ? [{ id: 'data', name: 'Format Conversion', detail: 'File loaded. Ready to convert.' }] : [],
   })
@@ -240,10 +236,10 @@ async function handleDataFile(event) {
       <span class="agent-online"><i></i>{{ replyMode }}</span>
     </header>
 
-    <section class="agent-roster" aria-label="Agent team">
+    <section class="agent-roster" aria-label="Agent roles">
       <div class="roster-heading">
-        <span>Agent team</span>
-        <small>4 agents ready</small>
+        <span>Paper agent roles</span>
+        <small>{{ agents.length }} roles</small>
       </div>
       <div class="agent-list">
         <div v-for="agent in agents" :key="agent.name" class="agent-member">
@@ -252,7 +248,6 @@ async function handleDataFile(event) {
             <strong>{{ agent.name }}</strong>
             <small>{{ agent.role }}</small>
           </span>
-          <i :class="agent.status"></i>
         </div>
       </div>
     </section>
@@ -546,7 +541,7 @@ async function handleDataFile(event) {
 
 .agent-list {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 6px;
 }
 
@@ -563,6 +558,8 @@ async function handleDataFile(event) {
   background: rgba(255, 255, 255, 0.025);
   text-align: center;
 }
+
+.agent-member:last-child { grid-column: 1 / -1; }
 
 .member-icon {
   display: grid;

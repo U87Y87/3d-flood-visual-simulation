@@ -13,7 +13,7 @@ export async function resolveAgentReply({ useRemote, history, localAnswer, signa
     if (!response.ok) throw new Error('remote_unavailable')
     const data = await response.json()
     if (data.source !== 'openai' || typeof data.reply !== 'string' || !data.reply.trim()) throw new Error('remote_unavailable')
-    return { ...local, agent: 'ChatGPT Assistant', reply: data.reply.trim(), source: 'openai' }
+    return { ...local, reply: data.reply.trim(), source: 'openai' }
   } catch {
     return { ...local, source: 'fallback' }
   }

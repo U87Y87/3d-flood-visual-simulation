@@ -35,7 +35,7 @@ The solver exits after generating frame 100. The Python worker then verifies JSO
 - `WorkflowPanel.vue` submits the two input files and polls job progress.
 - `App.vue` receives shared input files and the completed mesh folder, then calls the existing `Render.vue` loader and playback.
 
-The scheduler follows a fixed dependency sequence. The AI Assistant separately uses keyword-based tool suggestions and optional advisory chat. Correspondence between this implementation and the paper's proposed multi-agent planning mechanism requires the authors' method and experiment code.
+The manuscript defines five roles: **Requirement Analyst**, **Task Creator**, **Decision Maker**, **Task Executor**, and **Organizer**. Their responsibilities are listed in the [README role table](../README.md#request-interpretation-and-roles). The interface and optional chat-provider instructions share these definitions in `src/js/agentRoles.js`. Input validation uses the Requirement Analyst label, and tool recommendations use the Decision Maker label. The scheduler follows a fixed dependency sequence. AutoGen-based collaboration and request-derived planning require the corresponding method implementation.
 
 ## Terminal example
 

@@ -159,7 +159,19 @@ The Automatic workflow uses the bounded `--workflow` solver process to produce s
 
 `src/components/AgentAssistant.vue` contains `toolRules` and `buildAnswer`. It lowercases the request, scores keyword matches, and selects the highest-scoring rule. The selected object contains an agent label, a reply, and tool IDs used for navigation. Users supply file inputs and parameters through the relevant panels.
 
-The interface displays Coordinator, Data Agent, Simulation Agent, and Scene Agent roles. Their current implementation consists of rule-selected labels and tool suggestions. The automatic service workflow executes the fixed dependencies in `backend/workflow.py`. Independent agent processes, inter-agent messages, and request-derived planning require the authors' corresponding method implementation.
+The role names and responsibilities follow manuscript sections **2.2.2**, **2.4.2**, and **3.1**. The five definitions are shared by the interface and chat-provider instructions through `src/js/agentRoles.js`.
+
+| Role | Responsibility in the manuscript |
+| --- | --- |
+| Requirement Analyst | Parses user requirements and constraints and generates standardized task instructions. |
+| Task Creator | Decomposes instructions into task nodes and initializes parameters. |
+| Decision Maker | Coordinates collaboration, matches atomic services, and dispatches tasks according to constraints and node states. |
+| Task Executor | Invokes atomic services for preprocessing, numerical simulation, visualization, and analysis. |
+| Organizer | Reports task counts, participating agents, and execution order to the Decision Maker, then validates and integrates the results. |
+
+The assistant labels input interpretation and TIFF validation as **Requirement Analyst**, and tool-selection advice as **Decision Maker**. Optional remote replies retain the selected paper role, while the provider badge identifies the chat source. The roster presents all five role definitions.
+
+The automatic service workflow executes the fixed dependencies in `backend/workflow.py`. AutoGen-based role instances, inter-agent message queues, and requirement-derived planning require the corresponding method implementation.
 
 ### Communication and execution
 

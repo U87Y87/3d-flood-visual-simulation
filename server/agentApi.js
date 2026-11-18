@@ -1,5 +1,8 @@
+import { AGENT_ROLES } from '../src/js/agentRoles.js'
+
 // Server-only module. Never import this file from src/ or expose the API key via VITE_*.
 const INSTRUCTIONS = `You are the assistant for the Multi-Agent Flood Chain Service System. Respond in English. Available modules are Data Processing, Flood Simulation, Grid Conversion, Visualization, and Case Studies.
+The manuscript defines these five roles: ${Object.values(AGENT_ROLES).map(({ name, description }) => name + ' - ' + description).join(' ')}
 Explain the workflow and required inputs. Provide advice only; never claim to have read user files, run simulations, changed the map, or executed tools.
 Do not invent water depth, velocity, damage, or simulation results without user-provided evidence. Keep replies concise.`
 
